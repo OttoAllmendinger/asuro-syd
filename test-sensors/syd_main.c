@@ -33,6 +33,8 @@ uint8_t surface_state[2];
 uint16_t surface_switch_time[2];
 uint16_t surface_switch_time_delta[2];
 
+uint16_t surface_threshold[2];
+
 
 char switches;
 
@@ -60,23 +62,25 @@ void send_sensor_data() {
 
 void calibrate_linedata() {
     ulong start_time = Gettime();
-    ulong i;
-    uint32_t ldsum[2];
+    uint ldmax[2];
     uint ld[2];
     uint tdiff = 0;
 
     while (tdiff<1000) {
         LineData(ld);
-        ldsum[0] += ld[0];
-        ldsum[1] += ld[1];
+        int i;
+        for (i=0; i<2; i++) {
+            if (ld[i]>ldmax[i]) {
+                ldmax[i] = ld[i];
+            }
+        }
         tdiff = Gettime()-start_time;
-        i++;
     }
 
-    line_data_avg[0] = (uint16_t)((double)(ldsum[0])/(double)i);
-    line_data_avg[1] = (uint16_t)((double)(ldsum[1])/(double)i);
+    surface_threshold[0] = (uint16_t)(ldmax[0] * 0.75);
+    surface_threshold[1] = (uint16_t)(ldmax[1] * 0.75);
 
-    send(DEBUG | 2, line_data_avg, U2, 2);
+    send(DEBUG | 2, surface_threshold, U2, 2);
 }
 
 void syd_init() {
@@ -87,7 +91,7 @@ void syd_init() {
 
 void surface_data(int i) {
     char sfs;
-    if (line_data[i] < (line_data_avg[i]*0.75)) {
+    if (line_data[i] < surface_threshold[i]) {
         sfs = SURFACE_DARK;
     } else {
         sfs = SURFACE_LIGHT;
