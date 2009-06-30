@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+import sys
+import string
+import time
+
+from pysyd import SydSerial
+from pysyd.SydReceiver import SydReceiver
+
+
+def dsp():
+    CON = SydSerial.getConnection()
+    while True:
+        char = CON.read()
+        if char in string.printable:
+            sys.stdout.write(char)
+        else:
+            sys.stdout.write("%02x" % ord(CON.read()))
+            sys.stdout.flush()
+
+def dsp_line():
+    CON = SydSerial.getConnection()
+    while True:
+        line = CON.readline()
+        print line
+
+def dsp_hex():
+    CON = SydSerial.getConnection()
+    i=0
+    while True:
+        char = CON.read()
+        sys.stdout.write("%02x " % ord(CON.read()))
+        i+=1
+        if i==16:
+            sys.stdout.write("\n")
+            i=0
+        sys.stdout.flush()
+
+def rcv():
+    rcv = SydReceiver()
+    rcv.receive()
+
+if __name__=="__main__":
+    DSP_HEX = "-h" in sys.argv
+    DSP_LINE = "-l" in sys.argv
+    DSP_RCV = "-r" in sys.argv
+
+    if DSP_HEX:
+        dsp_hex()
+    elif DSP_LINE:
+        dsp_line()
+    elif DSP_RCV:
+        rcv()
+    else:
+        dsp()
