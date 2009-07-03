@@ -8,3 +8,4 @@ syntax: glob
 *.eep
 *.map
 *.d
+*.pyc
