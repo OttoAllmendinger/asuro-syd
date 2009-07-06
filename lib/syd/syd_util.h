@@ -11,3 +11,7 @@
 #define U1 1
 #define U2 2
 #define U4 4
+
+void ser_printf(const char *fmt, ...);
+void syd_message(char* name);
+void send(uchar id, uchar* data, char type, uchar size);

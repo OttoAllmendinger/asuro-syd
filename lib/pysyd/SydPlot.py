@@ -26,6 +26,8 @@ class SydPlot(Canvas):
 
     def update(self):
         self.draw_background()
+        self.crange[0]=min(b.array.min() for n,b in self.buffers.items()) - 20
+        self.crange[1]=max(b.array.max() for n,b in self.buffers.items()) + 20
         for n, buf in self.buffers.items():
             self.draw_buffer(buf, n, color=self.COLORS[n])
 
@@ -41,6 +43,7 @@ class SydPlot(Canvas):
 
         label = "%s: %d" % (self.label, buf.array[0])
         self.create_text((4, 4 + index*16), text=label, anchor=NW, fill=color)
+
 
         xcoords = (1.0-N.arange(buf.idx)/float(buf.length)) * W
         ycoords = (buf.array[:buf.idx]-cmin)/float(cmax-cmin) # normalize

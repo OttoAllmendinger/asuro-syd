@@ -11,7 +11,7 @@ from pysyd.SydReceiver import SydReceiver
 def dsp():
     CON = SydSerial.getConnection()
     while True:
-        char = CON.read()
+        char = CON.read(1)
         if char in string.printable:
             sys.stdout.write(char)
         else:
@@ -22,7 +22,8 @@ def dsp_line():
     CON = SydSerial.getConnection()
     while True:
         line = CON.readline()
-        print line
+        if not line.startswith("send"):
+            print line,
 
 def dsp_hex():
     CON = SydSerial.getConnection()

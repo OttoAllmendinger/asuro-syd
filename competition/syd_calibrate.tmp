@@ -1,0 +1,39 @@
+
+void calibrate_linedata() {
+    ulong tstart = Gettime();
+    ulong tdiff=0;
+    uint32_t ldsum0=0;
+    uint32_t ldsum1=0;
+    uint32_t diff_sum=0;
+    uint16_t i=0;
+
+
+    SetMotorPower(-48, 48);
+    FrontLED(ON);
+
+    while (tdiff<5000) {
+        uint line_data[2];
+        LineData(line_data);
+        ldsum0 += line_data[0];
+        ldsum1 += line_data[1];
+        diff_sum += line_data[0]-line_data[1];
+        ser_printf("line_data=%d,%d\n", line_data[0], line_data[1]);
+        ser_printf("ld_sum=%d,%d\n", ldsum0, ldsum1);
+
+        ulong now = Gettime();
+        tdiff = now-tstart;
+        i++;
+    }
+
+    SetMotorPower(0, 0);
+    FrontLED(OFF);
+    tdiff=0;
+    ser_printf("dumping data...\n");
+    ser_printf("diff_sum=%d\n", diff_sum); 
+    ser_printf("i=%d\n", i);
+    /*
+    line_data_avg[0] = ld_sum[0]/i;
+    line_data_avg[1] = ld_sum[1]/i;
+    line_data_diff_avg = diff_sum/i;
+    */
+}

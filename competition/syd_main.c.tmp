@@ -1,0 +1,162 @@
+#include "asuro.h"
+
+#include "syd/syd.h"
+#include "syd/syd_util.h"
+
+#define SPEED_STEP 32
+
+#define DEBUG 0x80
+
+#define BATTERY (DEBUG | 1)
+#define SENSOR_LINE 0
+#define SENSOR_ODOMETRY 1
+#define SENSOR_SWITCHES 2
+
+#define SENSOR_CUSTOM 16
+
+
+#define SURFACE_DARK 0
+#define SURFACE_LIGHT 1
+
+
+uint16_t line_data[2];
+uint16_t line_data_avg[2];
+uint16_t line_data_diff_avg;
+
+uint16_t odo_data[2];
+
+uint8_t surface_changes[2];
+uint8_t surface_state[2];
+
+uint16_t surface_switch_time[2];
+uint16_t surface_switch_time_delta[2];
+
+uint16_t surface_threshold[2];
+
+
+char switches;
+
+
+void read_sensor_data() {
+    // uint ld_unfiltered[2];
+    LineData(line_data);
+    OdometryData(odo_data);
+    switches = PollSwitch();
+
+    surface_data(0);
+    surface_data(1);
+}
+
+void send_sensor_data() {
+    send(SENSOR_LINE,     line_data, U2, 2);
+    send(SENSOR_ODOMETRY, odo_data,  U2, 2);
+    send(SENSOR_SWITCHES, &switches, U1, 1);
+    send(64, line_data_avg, U2, 2);
+    send(64+1, &line_data_diff_avg, U2, 1);
+}
+
+void calibrate_linedata() {
+    // uint16_t line_data[2];
+    // FrontLED(OFF);
+    // LineData(line_data[2]);
+    // diff_off = (line_data[0]-line_data[1]);
+    // FrontLED(ON);
+    // LineData(line_data[2]);
+    // diff_on = (line_data[0]-line_data[1]);
+
+    ulong tstart = Gettime();
+    ulong tdiff=0;
+    float ld_sum[2]={0.0,0.0};
+    float diff_sum=0.0;
+    float counter=0.0;
+
+    SetMotorPower(-127, 127);
+    FrontLED(ON);
+
+    while (tdiff<2000) {
+        int i;
+        for (i=0; i<2; i++) {
+            ld_sum[i] += line_data[i];
+        }
+        diff_sum += line_data[0]-line_data[1];
+        counter++;
+
+        tdiff = Gettime()-tstart;
+
+        int msec = (int)(tdiff/10);
+        int q = (msec%4);
+        if (q==0) {
+            GREEN_LED_ON;
+        } else if (q==1) {
+            RED_LED_ON;
+        } else if (q==2) {
+            RED_LED_OFF;
+            BackLED(OFF, ON);
+        } else if (q==3) {
+            GREEN_LED_OFF;
+            BackLED(ON, OFF);
+        }
+    }
+    SetMotorPower(0, 0);
+    FrontLED(OFF);
+    tdiff=0;
+    ser_printf("dumping data...\n");
+    while (tdiff<1000) {
+        tdiff = Gettime()-tstart;
+        ser_printf("\nld_sum=%f,%f diff_sum=%f counter=%d\n", 
+                ld_sum[0], ld_sum[1], diff_sum, counter);
+    }
+    line_data_avg[0] = ld_sum[0]/counter;
+    line_data_avg[1] = ld_sum[1]/counter;
+    line_data_diff_avg = diff_sum/counter;
+}
+
+void syd_init() {
+    ser_printf("Hello World\n");
+    // calibrate_linedata();
+}
+
+
+void surface_data(int i) {
+    char sfs;
+    if (line_data[i] < surface_threshold[i]) {
+        sfs = SURFACE_DARK;
+    } else {
+        sfs = SURFACE_LIGHT;
+    }
+
+    if (sfs != surface_state[i]) {
+        surface_changes[i]++;
+        surface_switch_time[i] = Gettime();
+        surface_state[i] = sfs;
+    } 
+}
+
+void set_speeds() {
+}
+
+
+int main(void) {
+    Init();
+
+    /*
+    char init[] = "SYD INIT";
+    int16_t battery = Battery();
+    send(DEBUG,   init,     S1, 8);
+    send(BATTERY, &battery, S2, 1);
+    */
+
+    syd_init();
+
+
+
+    while(1) {
+        read_sensor_data();
+        // send_sensor_data();
+        set_speeds();
+    }
+    
+    return 0;
+}
+
+
